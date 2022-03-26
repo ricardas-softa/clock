@@ -36,11 +36,9 @@ library
 
 executable haskell-watch-exe
   main-is: Main.hs
-  other-modules:
-      Paths_haskell_watch
   hs-source-dirs:
       app
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -dynamic
   build-depends:
       base >=4.7 && <5
     , haskell-watch

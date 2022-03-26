@@ -33,8 +33,12 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -dynamic
     dependencies:
     - haskell-watch
+    when:
+    - condition: false
+      other-modules: Paths_haskell_watch
 
 tests:
   haskell-watch-test:
