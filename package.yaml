@@ -1,6 +1,6 @@
-name:                haskell-watch
+name:                hclock
 version:             0.1.0.0
-github:              "ricardas-softa/haskell-watch"
+github:              "ricardas-softa/hclock"
 license:             BSD3
 author:              "Ricardas Darksas"
 maintainer:          "ricardas@darksas.lt"
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/ricardas-softa/haskell-watch#readme>
+description:         Please see the README on GitHub at <https://github.com/ricardas-softa/hclock#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -26,7 +26,7 @@ library:
   source-dirs: src
 
 executables:
-  haskell-watch-exe:
+  hclock-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -35,13 +35,13 @@ executables:
     - -with-rtsopts=-N
     - -dynamic
     dependencies:
-    - haskell-watch
+    - hclock
     when:
     - condition: false
-      other-modules: Paths_haskell_watch
+      other-modules: Paths_hclock
 
 tests:
-  haskell-watch-test:
+  hclock-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -49,5 +49,5 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - haskell-watch
+    - hclock
     - hspec
