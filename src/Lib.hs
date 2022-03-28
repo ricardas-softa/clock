@@ -1,6 +1,13 @@
 module Lib
-    ( someFunc
+    ( printTime
+    , getTime
     ) where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+import Data.Time
+
+printTime :: IO ()
+printTime = do
+    time <- getTime
+    print time
+
+getTime = getCurrentTime

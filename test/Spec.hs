@@ -1,8 +1,10 @@
 import Test.Hspec
 import Lib
 
-main :: IO ()
-main = hspec $ do
-    describe "How to write a test" $ do
-        it "Should be able to run tests" $ do
-            someFunc `shouldBe` "someFunc"
+import Data.Time
+
+-- main :: IO ()
+-- main = hspec $ do
+    -- describe "Gets current time" $ do
+        -- it "Should get current time" $ do
+            -- getTime `shouldBe` getCurrentTime 

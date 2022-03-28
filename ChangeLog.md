@@ -1,4 +1,4 @@
-# Changelog for haskell-watch
+# Changelog for hclock
 
 ## Unreleased changes
 
