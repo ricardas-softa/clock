@@ -31,7 +31,8 @@ library
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      Cabal
+    , base >=4.7 && <5
     , time
   default-language: Haskell2010
 
@@ -54,7 +55,9 @@ test-suite hclock-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      Cabal
+    , base >=4.7 && <5
     , hclock
     , hspec
+    , time
   default-language: Haskell2010

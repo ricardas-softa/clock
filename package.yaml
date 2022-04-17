@@ -26,6 +26,7 @@ library:
   source-dirs: src
   dependencies:
   - time
+  - Cabal
 
 executables:
   hclock-exe:
@@ -53,3 +54,5 @@ tests:
     dependencies:
     - hclock
     - hspec
+    - time
+    - Cabal
