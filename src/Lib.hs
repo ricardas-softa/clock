@@ -9,7 +9,7 @@ import Distribution.Simple.Utils
 
 -- CLOCK DESIGN
 clockDetails :: [Detail]
-clockDetails = [Center, Border, HourHand]
+clockDetails = [Center, Border, HourHand, MinuteHand, SecondHand]
 
 -- Brightness levels
 brightness0 = ' '
@@ -78,18 +78,37 @@ drawBorder (Config size) _ = Layer $ drawArk size 1 ++ drawArk size (-1)
 
 -- Helper to draw circle. Takes grid size and direction as 1 or -1
 drawArk :: Int -> Int -> [Cell]
-drawArk size direction = [ Cell (x, round(sqrt(((fromIntegral size - 1) / 2) ** 2 - fromIntegral x ** 2 )) * direction) brightness2 | x <- gridRange size ]
+drawArk size direction = [ Cell (x, round(sqrt(r ** 2 - fromIntegral x ** 2 )) * direction) brightness2 |
+                         x <- gridRange size ]
+                         where r = (fromIntegral size - 1) / 2
+
+drawHand :: Int -> Int -> Char -> Int -> Int -> Layer
+drawHand size lengthPercentage symbol value maxValues = Layer [ Cell (x, round $ fromIntegral x * (yEnd / xEnd)) symbol |
+                                          x <- gridRange size,
+                                          if xEnd >= 0 then
+                                            x >= 0 && x <= round xEnd
+                                            else x <= 0 && x >= round xEnd]
+                                          where
+                                          a = (2 * pi / fromIntegral maxValues) * fromIntegral value
+                                          r = (((fromIntegral size - 1) / 2) * fromIntegral lengthPercentage) / 100
+                                          xEnd = sin a * r
+                                          yEnd = cos a * r
 
 drawHourHand :: Config -> Time -> Layer
-drawHourHand (Config size) (Time h _ _) = Layer [Cell (round $ sin a * r, round $ cos a * r) brightness3]
-  where
-    a = (pi / 6) * fromIntegral h
-    r = (fromIntegral size - 1) / 2
+drawHourHand (Config size) time = drawHand size 50 brightness3 (hour time) 12
+
+drawMinuteHand :: Config -> Time -> Layer
+drawMinuteHand (Config size) time = drawHand size 80 brightness2 (minute time) 60
+
+drawSecondHand :: Config -> Time -> Layer
+drawSecondHand (Config size) time = drawHand size 90 brightness1 (second time) 60
 
 instance Drawable Detail where
   draw config time Center = drawCenter config time
   draw config time Border = drawBorder config time
   draw config time HourHand = drawHourHand config time
+  draw config time MinuteHand = drawMinuteHand config time
+  draw config time SecondHand = drawSecondHand config time
   draw _ _ _ = Layer [] -- TODO: Implement other Details
 
 -- instance Drawable Figure where
