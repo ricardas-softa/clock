@@ -9,7 +9,7 @@ import Distribution.Simple.Utils
 
 -- CLOCK DESIGN
 clockDetails :: [Detail]
-clockDetails = [Center, Border, HourHand, MinuteHand, SecondHand]
+clockDetails = [Center, Border, HourMarks, {--MinuteMarks,--} HourHand, MinuteHand, SecondHand]
 
 -- Brightness levels
 brightness0 = ' '
@@ -82,6 +82,18 @@ drawArk size direction = [ Cell (x, round(sqrt(r ** 2 - fromIntegral x ** 2 )) *
                          x <- gridRange size ]
                          where r = (fromIntegral size - 1) / 2
 
+drawHourMarks :: Config -> Time -> Layer
+drawHourMarks (Config size) time = drawMarks size 'O' 12
+
+drawMinuteMarks :: Config -> Time -> Layer
+drawMinuteMarks (Config size) time = drawMarks size '*' 60
+
+drawMarks :: Int -> Char -> Int -> Layer
+drawMarks size symbol count = Layer [Cell (round $ cos value * r, round $ sin value * r) symbol | value <- map (\x -> fromIntegral x * angle) [1..count]]
+  where r = (fromIntegral size - 1) / 2
+        angle | count == 12 = pi / 6
+              | otherwise = 2 * pi / fromIntegral count
+
 drawHand :: Int -> Int -> Char -> Int -> Int -> Layer
 drawHand size lengthPercentage symbol value maxValues = Layer [ Cell (x, round $ fromIntegral x * (yEnd / xEnd)) symbol |
                                           x <- gridRange size,
@@ -106,6 +118,8 @@ drawSecondHand (Config size) time = drawHand size 90 brightness1 (second time) 6
 instance Drawable Detail where
   draw config time Center = drawCenter config time
   draw config time Border = drawBorder config time
+  draw config time HourMarks = drawHourMarks config time
+  draw config time MinuteMarks = drawMinuteMarks config time
   draw config time HourHand = drawHourHand config time
   draw config time MinuteHand = drawMinuteHand config time
   draw config time SecondHand = drawSecondHand config time
