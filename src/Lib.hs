@@ -101,7 +101,7 @@ drawMarks size symbol count = Layer [Cell (round $ cos value * r, round $ sin va
               | otherwise = 2 * pi / fromIntegral count
 
 drawHand :: Int -> Int -> Char -> Int -> Int -> Layer
-drawHand size lengthPercentage symbol value maxValues = Layer [ Cell (x, round $ fromIntegral x * (yEnd / xEnd)) symbol |
+drawHand size lengthPercentage symbol value maxValues = Layer [ Cell (x, round $ fromIntegral x * (yEnd / xEnd)) (getDirectionalSymbol a) |
                                           x <- gridRange size,
                                           if xEnd >= 0 then
                                             x >= 0 && x <= round xEnd
@@ -120,6 +120,9 @@ drawMinuteHand (Config size) time = drawHand size 80 brightness2 (minute time) 6
 
 drawSecondHand :: Config -> Time -> Layer
 drawSecondHand (Config size) time = drawHand size 90 brightness1 (second time) 60
+
+getDirectionalSymbol :: Float -> Char
+getDirectionalSymbol angle = take 12 (cycle ['|', '/', '╱', '-', '╲', '\\']) !! round (6 * angle / pi)
 
 drawDigits :: Config -> Layer
 drawDigits config = Layer [Cell (getCoordsByHour (gridSize config) h) (intToDigit h) | h <- [1..9]] <> drawDoubleDigits config
@@ -170,7 +173,8 @@ gridRange gridSize = [gridSize `div` (-2) + 1..gridSize `div` 2]
 
 render :: Config -> Layer -> Grid
 render c (Layer []) = makeBlankGrid c
-render (Config gridSize) l = unlines [ [ renderGridChar $ getCell l (x,y) |
+-- render Grid leaving empty column to the left
+render (Config gridSize) l = unlines [ ' ' : [ renderGridChar $ getCell l (x,y) |
                                                          x <- gridRange gridSize ] |
                                                          y <- reverse $ gridRange gridSize]
 
