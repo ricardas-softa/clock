@@ -4,18 +4,29 @@ import Data.Time
 import Data.List
 import Data.Foldable
 import Distribution.Simple.Utils
+import Data.Char (intToDigit)
 
 ---- Constants ----
 
 -- CLOCK DESIGN
 clockDetails :: [Detail]
-clockDetails = [Center, Border, HourMarks, {--MinuteMarks,--} HourHand, MinuteHand, SecondHand]
+clockDetails = [Center, Border, HourMarks, {--MinuteMarks,--} Digits, Brand, HourHand, MinuteHand, SecondHand]
+
+-- CLOCK BRAND
+brand :: String
+brand = "HClock"
 
 -- Brightness levels
 brightness0 = ' '
-brightness1 = '·'
-brightness2 = '•'
-brightness3 = '■'
+brightness1 = '░'
+brightness2 = '▒'
+brightness3 = '▓'
+brightness4 = '█'
+
+-- brightness0 = ' '
+-- brightness1 = '·'
+-- brightness2 = '•'
+-- brightness3 = '■'
 
 ---- Types ----
 
@@ -70,23 +81,18 @@ data Detail = Center | Border | HourMarks | MinuteMarks | HourHand | MinuteHand 
 class Drawable a where
   draw :: Config -> Time -> a -> Layer
 
-drawCenter :: Config -> Time -> Layer
-drawCenter _ _= Layer [Cell (0, 0) brightness1]
+drawCenter :: Layer
+drawCenter = Layer [Cell (0, 0) brightness1]
 
-drawBorder :: Config -> Time -> Layer
-drawBorder (Config size) _ = Layer $ drawArk size 1 ++ drawArk size (-1)
+drawBorder :: Config -> Layer
+drawBorder (Config size) = Layer [Cell (round $ cos value * r, round $ sin value * r) brightness2 | value <- [1..360]]
+  where r = (fromIntegral size - 1) / 2
 
--- Helper to draw circle. Takes grid size and direction as 1 or -1
-drawArk :: Int -> Int -> [Cell]
-drawArk size direction = [ Cell (x, round(sqrt(r ** 2 - fromIntegral x ** 2 )) * direction) brightness2 |
-                         x <- gridRange size ]
-                         where r = (fromIntegral size - 1) / 2
+drawHourMarks :: Config -> Layer
+drawHourMarks (Config size) = drawMarks size brightness4 12
 
-drawHourMarks :: Config -> Time -> Layer
-drawHourMarks (Config size) time = drawMarks size 'O' 12
-
-drawMinuteMarks :: Config -> Time -> Layer
-drawMinuteMarks (Config size) time = drawMarks size '*' 60
+drawMinuteMarks :: Config -> Layer
+drawMinuteMarks (Config size) = drawMarks size '*' 60
 
 drawMarks :: Int -> Char -> Int -> Layer
 drawMarks size symbol count = Layer [Cell (round $ cos value * r, round $ sin value * r) symbol | value <- map (\x -> fromIntegral x * angle) [1..count]]
@@ -115,20 +121,34 @@ drawMinuteHand (Config size) time = drawHand size 80 brightness2 (minute time) 6
 drawSecondHand :: Config -> Time -> Layer
 drawSecondHand (Config size) time = drawHand size 90 brightness1 (second time) 60
 
-instance Drawable Detail where
-  draw config time Center = drawCenter config time
-  draw config time Border = drawBorder config time
-  draw config time HourMarks = drawHourMarks config time
-  draw config time MinuteMarks = drawMinuteMarks config time
-  draw config time HourHand = drawHourHand config time
-  draw config time MinuteHand = drawMinuteHand config time
-  draw config time SecondHand = drawSecondHand config time
-  draw _ _ _ = Layer [] -- TODO: Implement other Details
+drawDigits :: Config -> Layer
+drawDigits config = Layer [Cell (getCoordsByHour (gridSize config) h) (intToDigit h) | h <- [1..9]] <> drawDoubleDigits config
 
--- instance Drawable Figure where
---   draw (Dot x y) = Layer [Cell (x, y) brightness3]
---   draw (Line (x1, y1) (x2, y2)) = Layer [Cell (x1, y1) brightness3, Cell (x2, y2) brightness3]
---   draw (Circle (x, y) r) = Layer [Cell (x, y) brightness3]
+drawDoubleDigits :: Config -> Layer
+drawDoubleDigits (Config size) = foldl' (<>) (Layer []) $ map (\h -> drawText (getCoordsByHour size h) (show h)) [10..12]
+
+getCoordsByHour :: Int -> Int -> Coords
+getCoordsByHour size hour = (round $ sin (fromIntegral hour * angle) * r, round $ cos (fromIntegral hour * angle) * r)
+  where r = (fromIntegral size - 1) / 2 * 0.85
+        angle = pi / 6
+
+drawText :: Coords -> String -> Layer
+drawText _ [] = Layer []
+drawText (posX,posY) text = Layer [Cell (x,posY) c | x <- [posX..posX + length text - 1], c <- [text !! (x - posX)]]
+
+drawBrand :: Config -> Layer
+drawBrand (Config size) = drawText (round $ fromIntegral (-length brand) / 2,round $ fromIntegral size / 4) brand
+
+instance Drawable Detail where
+  draw _ _ Center               = drawCenter
+  draw config _ Border          = drawBorder config
+  draw config _ HourMarks       = drawHourMarks config
+  draw config _ MinuteMarks     = drawMinuteMarks config
+  draw config time HourHand     = drawHourHand config time
+  draw config time MinuteHand   = drawMinuteHand config time
+  draw config time SecondHand   = drawSecondHand config time
+  draw config _ Digits          = drawDigits config
+  draw config _ Brand           = drawBrand config
 
 ---- Functions ----
 
