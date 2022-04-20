@@ -5,6 +5,7 @@ import Data.List
 import Data.Foldable
 import Distribution.Simple.Utils
 import Data.Char (intToDigit)
+import System.Console.ANSI
 
 ---- Constants ----
 
@@ -181,10 +182,8 @@ render (Config gridSize) l = unlines [ ' ' : [ renderGridChar $ getCell l (x,y) 
 display :: Grid -> IO ()
 display = putStrLn
 
--- printTime :: IO ()
--- printTime = do
--- --   time <- getCurrentTime
--- --   let timeString = formatTime defaultTimeLocale "%H:%M" time
--- --   putStrLn timeString
---     time <- getCurrentTime
---     print time
+printTime :: IO ()
+printTime = print =<< getCurrentTime
+--   time <- getCurrentTime
+--   let timeString = formatTime defaultTimeLocale "%H:%M" time
+--   putStrLn timeString

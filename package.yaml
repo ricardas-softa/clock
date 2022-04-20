@@ -27,6 +27,7 @@ library:
   dependencies:
   - time
   - Cabal
+  - ansi-terminal
 
 executables:
   hclock-exe:
@@ -39,6 +40,7 @@ executables:
     - -dynamic
     dependencies:
     - hclock
+    - ansi-terminal
     when:
     - condition: false
       other-modules: Paths_hclock
@@ -56,3 +58,4 @@ tests:
     - hspec
     - time
     - Cabal
+    - ansi-terminal
