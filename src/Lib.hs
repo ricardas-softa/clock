@@ -3,15 +3,17 @@ module Lib where
 import Data.Time
 import Data.List
 import Data.Foldable
+import Data.Fixed
 import Distribution.Simple.Utils
 import Data.Char (intToDigit)
 import System.Console.ANSI
+import Control.Concurrent
 
 ---- Constants ----
 
 -- CLOCK DESIGN
 clockDetails :: [Detail]
-clockDetails = [Center, Border, HourMarks, {--MinuteMarks,--} Digits, Brand, HourHand, MinuteHand, SecondHand]
+clockDetails = [Border, HourMarks, {--MinuteMarks,--} Digits, Brand, HourHand, MinuteHand, SecondHand, Center]
 
 -- CLOCK BRAND
 brand :: String
@@ -83,10 +85,10 @@ class Drawable a where
   draw :: Config -> Time -> a -> Layer
 
 drawCenter :: Layer
-drawCenter = Layer [Cell (0, 0) brightness1]
+drawCenter = Layer [Cell (0, 0) '•']
 
 drawBorder :: Config -> Layer
-drawBorder (Config size) = Layer [Cell (round $ cos value * r, round $ sin value * r) brightness2 | value <- [1..360]]
+drawBorder (Config size) = Layer [Cell (round $ cos value * r, round $ sin value * r) brightness2 | value <- [0,0.01..2 * pi]]
   where r = (fromIntegral size - 1) / 2
 
 drawHourMarks :: Config -> Layer
@@ -102,7 +104,7 @@ drawMarks size symbol count = Layer [Cell (round $ cos value * r, round $ sin va
               | otherwise = 2 * pi / fromIntegral count
 
 drawHand :: Int -> Int -> Char -> Int -> Int -> Layer
-drawHand size lengthPercentage symbol value maxValues = Layer [ Cell (x, round $ fromIntegral x * (yEnd / xEnd)) (getDirectionalSymbol a) |
+drawHand size lengthPercentage _ value maxValues = Layer [ Cell (x, round $ fromIntegral x * (yEnd / xEnd)) (getDirectionalSymbol a) |
                                           x <- gridRange size,
                                           if xEnd >= 0 then
                                             x >= 0 && x <= round xEnd
@@ -123,7 +125,12 @@ drawSecondHand :: Config -> Time -> Layer
 drawSecondHand (Config size) time = drawHand size 90 brightness1 (second time) 60
 
 getDirectionalSymbol :: Float -> Char
-getDirectionalSymbol angle = take 12 (cycle ['|', '/', '╱', '-', '╲', '\\']) !! round (6 * angle / pi)
+getDirectionalSymbol angle = take 12 (cycle ['|', '/', '╱', '-', '╲', '\\']) !! round ( normalizeAngle (6 * angle / pi))
+  where
+  normalizeAngle :: Float -> Float
+  normalizeAngle angle | reducedAngle < 0 = 2 * pi + angle
+                      | otherwise = reducedAngle
+                where reducedAngle = angle `mod'` (2 * pi)
 
 drawDigits :: Config -> Layer
 drawDigits config = Layer [Cell (getCoordsByHour (gridSize config) h) (intToDigit h) | h <- [1..9]] <> drawDoubleDigits config
@@ -187,3 +194,16 @@ printTime = print =<< getCurrentTime
 --   time <- getCurrentTime
 --   let timeString = formatTime defaultTimeLocale "%H:%M" time
 --   putStrLn timeString
+
+clScreen :: IO ()
+clScreen = putStr "\ESC[3J\ESC[1;1H"
+
+runClock :: Config -> IO ()
+runClock config = do
+  clScreen
+  now <- getCurrentTime
+  timeZone <- getCurrentTimeZone
+  let (TimeOfDay hour minute second) = localTimeOfDay $ utcToLocalTime timeZone now
+  display $ render config (drawClock config (Time hour minute (floor second)))
+  threadDelay $ 1000 * 1000
+  runClock config
