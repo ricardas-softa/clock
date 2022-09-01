@@ -107,15 +107,15 @@ buildInitState = AnimationState R 0
 drawCenter :: Layer
 drawCenter = Layer [Cell (0, 0) '•']
 
-drawBorder :: Config -> Layer
-drawBorder (Config size) = Layer [Cell (round $ cos value * r, round $ sin value * r) brightness2 | value <- [0,0.01..2 * pi]]
+drawBorder :: Int -> Layer
+drawBorder size = Layer [Cell (round $ cos value * r, round $ sin value * r) brightness2 | value <- [0,0.01..2 * pi]]
   where r = (fromIntegral size - 1) / 2
 
-drawHourMarks :: Config -> Layer
-drawHourMarks (Config size) = drawMarks size brightness4 12
+drawHourMarks :: Int -> Layer
+drawHourMarks size = drawMarks size brightness4 12
 
-drawMinuteMarks :: Config -> Layer
-drawMinuteMarks (Config size) = drawMarks size '*' 60
+drawMinuteMarks :: Int -> Layer
+drawMinuteMarks size = drawMarks size '*' 60
 
 drawMarks :: Int -> Char -> Int -> Layer
 drawMarks size symbol count = Layer [Cell (round $ cos value * r, round $ sin value * r) symbol | value <- map (\x -> fromIntegral x * angle) [1..count]]
@@ -132,14 +132,14 @@ drawHand size lengthPercentage _ value maxValues = Layer [ Cell (round(xEnd * fr
                                           xEnd = sin a * r
                                           yEnd = cos a * r
 
-drawHourHand :: Config -> Time -> Layer
-drawHourHand (Config size) time = drawHand size 50 brightness3 (hour time) 12
+drawHourHand :: Int -> Time -> Layer
+drawHourHand size time = drawHand size 50 brightness3 (hour time) 12
 
-drawMinuteHand :: Config -> Time -> Layer
-drawMinuteHand (Config size) time = drawHand size 80 brightness2 (minute time) 60
+drawMinuteHand :: Int -> Time -> Layer
+drawMinuteHand size time = drawHand size 80 brightness2 (minute time) 60
 
-drawSecondHand :: Config -> Time -> Layer
-drawSecondHand (Config size) time = drawHand size 85 brightness1 (second time) 60
+drawSecondHand :: Int -> Time -> Layer
+drawSecondHand size time = drawHand size 85 brightness1 (second time) 60
 
 getDirectionalSymbol :: Float -> Char
 getDirectionalSymbol angle = take 12 (cycle ['‧', '‧', '‧', '‧', '‧', '‧']) !! round ( normalizeAngle (6 * angle / pi))
@@ -149,11 +149,11 @@ getDirectionalSymbol angle = take 12 (cycle ['‧', '‧', '‧', '‧', '‧', 
                       | otherwise = reducedAngle
                 where reducedAngle = angle `mod'` (2 * pi)
 
-drawDigits :: Config -> Layer
-drawDigits config = Layer [Cell (getCoordsByHour (gridSize config) h) (intToDigit h) | h <- [1..9]] <> drawDoubleDigits config
+drawDigits :: Int -> Layer
+drawDigits size = Layer [Cell (getCoordsByHour size h) (intToDigit h) | h <- [1..9]] <> drawDoubleDigits size
 
-drawDoubleDigits :: Config -> Layer
-drawDoubleDigits (Config size) = foldl' (<>) (Layer []) $ map (\h -> drawText (getCoordsByHour size h) (show h)) [10..12]
+drawDoubleDigits :: Int -> Layer
+drawDoubleDigits size = foldl' (<>) (Layer []) $ map (\h -> drawText (getCoordsByHour size h) (show h)) [10..12]
 
 getCoordsByHour :: Int -> Int -> Coords
 getCoordsByHour size hour = (round $ sin (fromIntegral hour * angle) * r, round $ cos (fromIntegral hour * angle) * r)
@@ -164,8 +164,8 @@ drawText :: Coords -> String -> Layer
 drawText _ [] = Layer []
 drawText (posX,posY) text = Layer [Cell (x,posY) c | x <- [posX..posX + length text - 1], c <- [text !! (x - posX)]]
 
-drawBrand :: Config -> AnimationState -> Layer
-drawBrand (Config size) state = drawText (x,y) brand <> drawAnimation state
+drawBrand :: Int -> AnimationState -> Layer
+drawBrand size state = drawText (x,y) brand <> drawAnimation state
   where x = round $ fromIntegral (-length brand) / 2
         y = round $ fromIntegral size / 4
 
@@ -189,21 +189,21 @@ centerText :: Int -> String -> String
 centerText size text = replicate ((size - length text) `div` 2) ' ' ++ text
 
 instance Drawable Detail where
-  -- draw :: Config -> AnimationState -> Time -> a -> Layer
+  -- draw :: Drawable a => Config -> AnimationState -> Time -> a -> Layer
   draw _ _ _ Center               = drawCenter
-  draw config _ _ Border          = drawBorder config
-  draw config _ _ HourMarks       = drawHourMarks config
-  draw config _ _ MinuteMarks     = drawMinuteMarks config
-  draw config _ time HourHand     = drawHourHand config time
-  draw config _ time MinuteHand   = drawMinuteHand config time
-  draw config _ time SecondHand   = drawSecondHand config time
-  draw config _ _ Digits          = drawDigits config
-  draw config state _ Brand           = drawBrand config state
+  draw config _ _ Border          = drawBorder (gridSize config)
+  draw config _ _ HourMarks       = drawHourMarks (gridSize config)
+  draw config _ _ MinuteMarks     = drawMinuteMarks (gridSize config)
+  draw config _ time HourHand     = drawHourHand (gridSize config) time
+  draw config _ time MinuteHand   = drawMinuteHand (gridSize config) time
+  draw config _ time SecondHand   = drawSecondHand (gridSize config) time
+  draw config _ _ Digits          = drawDigits (gridSize config)
+  draw config state _ Brand           = drawBrand (gridSize config) state
 
 ---- Functions ----
 
-makeBlankGrid :: Config -> String
-makeBlankGrid (Config gridSize) = concat $ replicate gridSize (replicate gridSize brightness0 ++ "\n")
+makeBlankGrid :: Int -> String
+makeBlankGrid gridSize = concat $ replicate gridSize (replicate gridSize brightness0 ++ "\n")
 
 drawClock :: Config -> AnimationState -> Time -> Layer
 drawClock c s t = foldl' (<>) (Layer []) $ map (draw c s t) clockDetails
@@ -218,10 +218,10 @@ renderGridChar (Just (Cell _ symbol)) = symbol
 gridRange :: Int -> [Int]
 gridRange gridSize = [gridSize `div` (-2) + 1..gridSize `div` 2]
 
-render :: Config -> Layer -> Grid
-render c (Layer []) = makeBlankGrid c
+render :: Int -> Layer -> Grid
+render gridSize (Layer []) = makeBlankGrid gridSize
 -- render Grid leaving empty column to the left
-render (Config gridSize) l = unlines [ ' ' : [ renderGridChar $ getCell l (x,y) |
+render gridSize l = unlines [ ' ' : [ renderGridChar $ getCell l (x,y) |
                                                          x <- gridRange gridSize ] |
                                                          y <- reverse $ gridRange gridSize]
 
@@ -268,7 +268,7 @@ runClock config state = do
                   now <- getCurrentTime
                   timeZone <- getCurrentTimeZone
                   let (TimeOfDay hour minute second) = localTimeOfDay $ utcToLocalTime timeZone now
-                  display $ render config (drawClock config state (Time hour minute (floor second)))
+                  display $ render (gridSize config) (drawClock config state (Time hour minute (floor second)))
                   putStrLn $ centerText (gridSize config) "Press ANY key to exit"
                   threadDelay $ 10 * 1000
                   wait kbInput (transition state)
