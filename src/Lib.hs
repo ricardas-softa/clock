@@ -8,6 +8,8 @@ import Data.Char (intToDigit, toLower)
 import System.Console.ANSI
 import Control.Concurrent
 import Control.Monad
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.State.Lazy
 import Data.Maybe
 import System.Exit
 import System.IO
@@ -33,11 +35,6 @@ brightness2 = '▒'
 brightness3 = '▓'
 brightness4 = '█'
 
--- brightness0 = ' '
--- brightness1 = '·'
--- brightness2 = '•'
--- brightness3 = '■'
-
 ---- Types ----
 
 newtype Config = Config
@@ -57,6 +54,8 @@ data AnimationState = AnimationState
     direction :: Direction,
     position :: Int
   }
+
+type StateIO = StateT AnimationState IO
 
 data Time = Time
   {
@@ -91,10 +90,6 @@ instance Semigroup Layer where
   Layer a <> Layer [] = Layer a
   Layer [] <> Layer b = Layer b
   Layer a <> Layer b = Layer (map head . group . sort $ b ++ a)
-
--- data Figure = Dot { xCoord :: Int, yCoord :: Int }
---             | Line { pointA :: Coords, pointB :: Coords }
---             | Circle { center :: Coords, radius :: Int }
 
 data Detail = Center | Border | HourMarks | MinuteMarks | HourHand | MinuteHand | SecondHand | Digits | Brand
 
@@ -225,15 +220,7 @@ render gridSize l = unlines [ ' ' : [ renderGridChar $ getCell l (x,y) |
                                                          x <- gridRange gridSize ] |
                                                          y <- reverse $ gridRange gridSize]
 
-transition :: AnimationState -> AnimationState
-transition (AnimationState R pos) = if pos == length brand then AnimationState D 0
-                                  else AnimationState R (pos + 1)
-transition (AnimationState D pos) = if pos == 1 then AnimationState L 0
-                                  else AnimationState D (pos + 1)
-transition (AnimationState L pos) = if pos == length brand then AnimationState U 0
-                                  else AnimationState L (pos + 1)
-transition (AnimationState U pos) = if pos == 1 then AnimationState R 0
-                                  else AnimationState U (pos + 1)
+
 
 
 display :: Grid -> IO ()
@@ -242,16 +229,6 @@ display = putStrLn
 clScreen :: IO ()
 clScreen = putStr "\ESC[3J\ESC[1;1H"
 
--- runClock :: Config -> AnimationState -> IO ()
--- runClock config state = do
---   clScreen
---   now <- getCurrentTime
---   timeZone <- getCurrentTimeZone
---   let (TimeOfDay hour minute second) = localTimeOfDay $ utcToLocalTime timeZone now
---   display $ render config (drawClock config state (Time hour minute (floor second)))
---   threadDelay $ 1000 * 1000
---   runClock config (transition state)
-
 runClock :: Config -> AnimationState -> IO ()
 runClock config state = do
     kbInput <- newEmptyMVar
@@ -259,16 +236,30 @@ runClock config state = do
     forkIO $ do
       key <- getChar
       putMVar kbInput key
-    wait kbInput state
-        where wait kbInput state = do
-                key <- tryTakeMVar kbInput
-                if isJust key then void $ clScreen >> clearScreen >> showCursor >> putStrLn "\nGood Bye!"
+    evalStateT (wait kbInput) state
+        where 
+          wait :: MVar Char -> StateIO ()
+          wait kbInput = do
+                key <- lift $ tryTakeMVar kbInput
+                if isJust key then lift $ void $ clScreen >> clearScreen >> showCursor >> putStrLn "\nGood Bye!"
                 else do
-                  clScreen
-                  now <- getCurrentTime
-                  timeZone <- getCurrentTimeZone
+                  lift clScreen
+                  now <- lift getCurrentTime
+                  timeZone <- lift getCurrentTimeZone
                   let (TimeOfDay hour minute second) = localTimeOfDay $ utcToLocalTime timeZone now
-                  display $ render (gridSize config) (drawClock config state (Time hour minute (floor second)))
-                  putStrLn $ centerText (gridSize config) "Press ANY key to exit"
-                  threadDelay $ 10 * 1000
-                  wait kbInput (transition state)
+                  currentState <- get
+                  lift $ display $ render (gridSize config) (drawClock config currentState (Time hour minute (floor second)))
+                  lift $ putStrLn $ centerText (gridSize config) "Press ANY key to exit"
+                  lift $ threadDelay $ 10 * 1000
+                  modify transition
+                  wait kbInput
+
+          transition :: AnimationState -> AnimationState
+          transition (AnimationState R pos) = if pos == length brand then AnimationState D 0
+                                            else AnimationState R (pos + 1)
+          transition (AnimationState D pos) = if pos == 1 then AnimationState L 0
+                                            else AnimationState D (pos + 1)
+          transition (AnimationState L pos) = if pos == length brand then AnimationState U 0
+                                            else AnimationState L (pos + 1)
+          transition (AnimationState U pos) = if pos == 1 then AnimationState R 0
+                                            else AnimationState U (pos + 1)

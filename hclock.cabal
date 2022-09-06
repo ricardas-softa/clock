@@ -35,6 +35,7 @@ library
     , ansi-terminal
     , base >=4.7 && <5
     , time
+    , transformers
   default-language: Haskell2010
 
 executable hclock-exe
@@ -46,6 +47,7 @@ executable hclock-exe
       ansi-terminal
     , base >=4.7 && <5
     , hclock
+    , transformers
   default-language: Haskell2010
 
 test-suite hclock-test
@@ -63,4 +65,5 @@ test-suite hclock-test
     , hclock
     , hspec
     , time
+    , transformers
   default-language: Haskell2010

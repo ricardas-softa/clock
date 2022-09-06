@@ -28,6 +28,7 @@ library:
   - time
   - Cabal
   - ansi-terminal
+  - transformers
 
 executables:
   hclock-exe:
@@ -41,6 +42,7 @@ executables:
     dependencies:
     - hclock
     - ansi-terminal
+    - transformers
     when:
     - condition: false
       other-modules: Paths_hclock
@@ -59,3 +61,4 @@ tests:
     - time
     - Cabal
     - ansi-terminal
+    - transformers
