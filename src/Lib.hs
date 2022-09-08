@@ -137,12 +137,15 @@ drawSecondHand :: Int -> Time -> Layer
 drawSecondHand size time = drawHand size 85 brightness1 (second time) 60
 
 getDirectionalSymbol :: Float -> Char
-getDirectionalSymbol angle = take 12 (cycle ['‧', '‧', '‧', '‧', '‧', '‧']) !! round ( normalizeAngle (6 * angle / pi))
-  where
-  normalizeAngle :: Float -> Float
-  normalizeAngle angle | reducedAngle < 0 = 2 * pi + angle
-                      | otherwise = reducedAngle
-                where reducedAngle = angle `mod'` (2 * pi)
+-- Tried to make hands directional, but it looks worse than just using the same symbol
+
+-- getDirectionalSymbol angle = take 12 (cycle ['|', '\'', '/', '‧', '`', '\\']) !! round ( normalizeAngle (6 * angle / pi))
+--   where
+--   normalizeAngle :: Float -> Float
+--   normalizeAngle angle | reducedAngle < 0 = 2 * pi + angle
+--                       | otherwise = reducedAngle
+--                 where reducedAngle = angle `mod'` (2 * pi)
+getDirectionalSymbol _ = '‧'
 
 drawDigits :: Int -> Layer
 drawDigits size = Layer [Cell (getCoordsByHour size h) (intToDigit h) | h <- [1..9]] <> drawDoubleDigits size
@@ -195,7 +198,6 @@ instance Drawable Detail where
   draw config _ _ Digits          = drawDigits (gridSize config)
   draw config state _ Brand           = drawBrand (gridSize config) state
 
----- Functions ----
 
 makeBlankGrid :: Int -> String
 makeBlankGrid gridSize = concat $ replicate gridSize (replicate gridSize brightness0 ++ "\n")
@@ -250,7 +252,7 @@ runClock config state = do
                   currentState <- get
                   lift $ display $ render (gridSize config) (drawClock config currentState (Time hour minute (floor second)))
                   lift $ putStrLn $ centerText (gridSize config) "Press ANY key to exit"
-                  lift $ threadDelay $ 10 * 1000
+                  lift $ threadDelay $ 20 * 1000
                   modify transition
                   wait kbInput
 
